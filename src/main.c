@@ -125,37 +125,44 @@ int main(void)
     Pixy2Init(0x54, 0U);
     /*Pixy2Test();*/
 
-    while(1){
-        double m0 = 0, m1 = 0;
-        Pixy2GetVectors(&PixyVectors);
-        if(PixyVectors.NumberOfVectors>=2){
-            double x0 = PixyVectors.Vectors[0].x0;
-            double x1 = PixyVectors.Vectors[0].x1;
+    while(true) {
+        	   HbridgeSetSpeed(&hbridge, -100, -100);
 
-            double y0 = PixyVectors.Vectors[0].y0;
-            double y1 = PixyVectors.Vectors[0].y1;
+        	   DetectedVectors pixyVectors = PixyGetVectors();
+        	   double medDeltaX = 0.0;
+        	   double medDeltaY = 0.0;
 
-            double x0_1 = PixyVectors.Vectors[1].x0;
-            double x1_1 = PixyVectors.Vectors[1].x1;
+        	   for(int i = 0; i < pixyVectors.NumberOfVectors; i++) {
+        		   DetectedVector vec = pixyVectors.Vectors[i];
+        		   double deltaX = (double) (vec.x1 - vec.x0);
+        		   double deltaY = (double) (vec.y1 - vec.y0);
+        		   medDeltaX += deltaX;
+        		   medDeltaY += deltaY;
+        	   }
 
-            double y0_1 = PixyVectors.Vectors[1].y0;
-            double y1_1 = PixyVectors.Vectors[1].y1;
-            m0 = (x0 - x1) / (y0-y1);
-            m1 = (x0_1 - x1_1) / (y0_1 - y1_1);
+        	   medDeltaX /= pixyVectors.NumberOfVectors;
+        	   medDeltaY /= pixyVectors.NumberOfVectors;
+        	   double signal = (medDeltaX / medDeltaY) * -1.0;
 
-        }
-        else if(PixyVectors.NumberOfVectors == 1){
-            double x0 = PixyVectors.Vectors[0].x0;
-            double x1 = PixyVectors.Vectors[0].x1;
+        	   const double MULTIPLY_LEFT = 30.0;
+        	   const double MULTIPLY_RIGHT = 32.0;
+        	   if(signal < 0.0) {
+        	   signal *= MULTIPLY_LEFT;
+        	   } else {
+        		   signal *= MULTIPLY_RIGHT;
+        	   }
 
-            double y0 = PixyVectors.Vectors[0].y0;
-            double y1 = PixyVectors.Vectors[0].y1;
-            m0 = (x0 - x1) / (y0-y1);
-        }
-        CarSteer = (m0  + m1) * 65;
-        HbridgeSetSpeed(100);
-        Steer(CarSteer);
-    }
+        	   const double MAX_STEER = 80.0;
+        	   const double STEER_OFFSET = -8.0;
+        	   if(signal > MAX_STEER) {
+        		   signal = MAX_STEER;
+        	   }
+        	   if(signal < -MAX_STEER) {
+        	       signal = -MAX_STEER;
+        	   }
+
+        	   Steer(signal + STEER_OFFSET, 0);
+           }
 }
 
 
